@@ -46,9 +46,9 @@
     0%, 100% { transform: scale(1); }
     50%       { transform: scale(1.04); }
   }
-  .fade-up  { animation: fadeUp 0.25s ease both; }
+  .fade-up   { animation: fadeUp 0.25s ease both; }
   .flip-anim { animation: flipCard 0.35s ease both; }
-  .pulse    { animation: pulse 0.3s ease; }
+  .pulse     { animation: pulse 0.3s ease; }
 </style>
 </head>
 <body>
@@ -68,37 +68,36 @@ const NOTES_SHEET = "Notes";
 
 // ── COLOURS ───────────────────────────────────────────────────────────────────
 const C = {
-  bg:          "#FAFAF7",
-  primary:     "#8BAF8B",
-  secondary:   "#9BA8C4",
-  card:        "#FFFFFF",
-  border:      "#EBEBЕ7",
-  again:       "#E8927C",
-  hard:        "#D4A847",
-  good:        "#8BAF8B",
-  easy:        "#9BA8C4",
-  text:        "#2D2D2D",
-  muted:       "#7A7A7A",
-  orange:      "#F0833A",
-  navBg:       "#FFFFFF",
+  bg:        "#FAFAF7",
+  primary:   "#8BAF8B",
+  secondary: "#9BA8C4",
+  card:      "#FFFFFF",
+  border:    "#E8E8E4",
+  again:     "#E8927C",
+  hard:      "#D4A847",
+  good:      "#8BAF8B",
+  easy:      "#9BA8C4",
+  text:      "#2D2D2D",
+  muted:     "#7A7A7A",
+  orange:    "#F0833A",
+  navBg:     "#FFFFFF",
 };
 
 // ── SM-2 ──────────────────────────────────────────────────────────────────────
 function applySM2(card, rating) {
-  let ef  = parseFloat(card.easeFactor) || 2.5;
-  let rep = parseInt(card.repCount)     || 0;
-  let interval = parseFloat(card.interval) || 1;
+  let ef       = parseFloat(card.easeFactor) || 2.5;
+  let rep      = parseInt(card.repCount)     || 0;
+  let interval = parseFloat(card.interval)   || 1;
   let newEF = ef, newInterval = 1, newRep = rep;
 
   if (rating === 0) {
     newRep = 0; newInterval = 1;
-    newEF = Math.max(1.3, ef - 0.2);
+    newEF  = Math.max(1.3, ef - 0.2);
   } else {
     newRep = rep + 1;
     if      (newRep === 1) newInterval = 1;
     else if (newRep === 2) newInterval = 6;
     else                   newInterval = Math.round(interval * ef);
-
     if (rating === 1) { newEF = Math.max(1.3, ef - 0.15); newInterval = Math.max(1, Math.round(newInterval * 0.7)); }
     if (rating === 3) { newEF = Math.min(3.0, ef + 0.1);  newInterval = Math.round(newInterval * 1.3); }
   }
@@ -120,15 +119,15 @@ function applySM2(card, rating) {
 const base = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 
 async function sheetGet(range) {
-  const url = `${base}/values/${encodeURIComponent(range)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${window._gToken}` } });
+  const res = await fetch(`${base}/values/${encodeURIComponent(range)}`, {
+    headers: { Authorization: `Bearer ${window._gToken}` },
+  });
   if (!res.ok) throw new Error(`Read error ${res.status}`);
   return (await res.json()).values || [];
 }
 
 async function sheetUpdate(range, values) {
-  const url = `${base}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
-  const res = await fetch(url, {
+  const res = await fetch(`${base}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${window._gToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ range, majorDimension: "ROWS", values }),
@@ -137,8 +136,7 @@ async function sheetUpdate(range, values) {
 }
 
 async function sheetAppend(range, values) {
-  const url = `${base}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const res = await fetch(url, {
+  const res = await fetch(`${base}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
     method: "POST",
     headers: { Authorization: `Bearer ${window._gToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ range, majorDimension: "ROWS", values }),
@@ -190,8 +188,7 @@ function parseLogs(rows) {
 
 // ── ICONS ─────────────────────────────────────────────────────────────────────
 function Ico({ n, size=22, color }) {
-  const s = { display:"block" };
-  const p = { fill:"none", stroke: color||"currentColor", strokeWidth:"1.8", strokeLinecap:"round", strokeLinejoin:"round" };
+  const p = { fill:"none", stroke:color||"currentColor", strokeWidth:"1.8", strokeLinecap:"round", strokeLinejoin:"round" };
   const icons = {
     home:    <><path {...p} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline {...p} points="9 22 9 12 15 12 15 22"/></>,
     cards:   <><rect {...p} x="2" y="4" width="20" height="16" rx="3"/><line {...p} x1="2" y1="10" x2="22" y2="10"/></>,
@@ -200,32 +197,26 @@ function Ico({ n, size=22, color }) {
     back:    <><line {...p} x1="19" y1="12" x2="5" y2="12"/><polyline {...p} points="12 19 5 12 12 5"/></>,
     ext:     <><path {...p} d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline {...p} points="15 3 21 3 21 9"/><line {...p} x1="10" y1="14" x2="21" y2="3"/></>,
     chev:    <polyline {...p} points="9 18 15 12 9 6"/>,
-    google:  <path fill={color||"white"} stroke="none" d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.908 8.908 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>,
     refresh: <><polyline {...p} points="23 4 23 10 17 10"/><path {...p} d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
+    google:  <path fill={color||"white"} stroke="none" d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.908 8.908 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>,
   };
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={s} aria-hidden="true">
-      {icons[n]}
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block"}} aria-hidden="true">{icons[n]}</svg>;
 }
 
 // ── FILTER SELECT ─────────────────────────────────────────────────────────────
-function FilterSelect({ label, value, options, onChange, disabled }) {
+function FilterSelect({ label, value, options, onChange }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>{label}</div>
+    <div style={{ marginBottom:10 }}>
+      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:0.8, marginBottom:4 }}>{label}</div>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        disabled={disabled}
         style={{
-          width: "100%", padding: "11px 14px", borderRadius: 12,
-          border: `1.5px solid ${value ? C.primary : "#E0E0DC"}`,
+          width:"100%", padding:"11px 14px", borderRadius:12,
+          border:`1.5px solid ${value ? C.primary : "#E0E0DC"}`,
           background: value ? `${C.primary}10` : C.card,
-          color: C.text, fontSize: 14, fontWeight: 600,
-          appearance: "none", WebkitAppearance: "none",
-          opacity: disabled ? 0.4 : 1,
+          color:C.text, fontSize:14, fontWeight:600,
+          appearance:"none", WebkitAppearance:"none",
         }}
       >
         <option value="">All</option>
@@ -240,6 +231,7 @@ function App() {
   const [tab,         setTab]         = useState("home");
   const [authed,      setAuthed]      = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [silentTrying,setSilentTrying]= useState(true);
   const [cards,       setCards]       = useState([]);
   const [notes,       setNotes]       = useState([]);
   const [logs,        setLogs]        = useState([]);
@@ -253,29 +245,45 @@ function App() {
   const [flipped,     setFlipped]     = useState(false);
   const [studying,    setStudying]    = useState(false);
   const [cardKey,     setCardKey]     = useState(0);
-  const sessionStart  = useRef(null);
+  const [manualMode,  setManualMode]  = useState(false);
+  const sessionStart = useRef(null);
 
-  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString().split("T")[0]; }, []);
+  const today = useMemo(() => {
+    const d = new Date(); d.setHours(0,0,0,0);
+    return d.toISOString().split("T")[0];
+  }, []);
 
-  // ── Google OAuth ────────────────────────────────────────────────────────────
+  // ── CHANGE 1: Stay logged in ───────────────────────────────────────────────
+  // Load GSI script, then try silent token refresh using stored hint
   useEffect(() => {
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
     s.onload = () => {
+      const hint = localStorage.getItem("sf_user_hint") || "";
       window._tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
+        hint,
         callback: resp => {
           if (resp.access_token) {
             window._gToken = resp.access_token;
+            // Save hint for next silent attempt
+            if (resp.email) localStorage.setItem("sf_user_hint", resp.email);
             setAuthed(true);
             setAuthLoading(false);
+            setSilentTrying(false);
           } else {
             setAuthLoading(false);
-            setError("Sign-in failed. Please try again.");
+            setSilentTrying(false);
           }
         },
       });
+      // Try silent sign-in if we have a previous hint
+      if (hint) {
+        window._tokenClient.requestAccessToken({ prompt: "" });
+      } else {
+        setSilentTrying(false);
+      }
     };
     document.head.appendChild(s);
   }, []);
@@ -286,7 +294,7 @@ function App() {
     window._tokenClient?.requestAccessToken({ prompt: "consent" });
   };
 
-  // ── Load data ───────────────────────────────────────────────────────────────
+  // ── Load data ──────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -304,7 +312,7 @@ function App() {
 
   useEffect(() => { if (authed) loadData(); }, [authed]);
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
   const dueCards = useMemo(
     () => cards.filter(c => !c.nextReviewDate || c.nextReviewDate <= today),
     [cards, today]
@@ -324,28 +332,30 @@ function App() {
 
   // Filter helpers
   const yearLevels  = [...new Set(cards.map(c=>c.yearLevel).filter(Boolean))].sort();
-  const examPeriods = (yL)     => [...new Set(cards.filter(c=>!yL||c.yearLevel===yL).map(c=>c.examPeriod).filter(Boolean))].sort();
-  const subjects    = (yL,eP)  => [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)).map(c=>c.subject).filter(Boolean))].sort();
-  const decks       = (yL,eP,s)=> [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)&&(!s||c.subject===s)).map(c=>c.deck).filter(Boolean))].sort();
+  const examPeriods = (yL)      => [...new Set(cards.filter(c=>!yL||c.yearLevel===yL).map(c=>c.examPeriod).filter(Boolean))].sort();
+  const subjects    = (yL,eP)   => [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)).map(c=>c.subject).filter(Boolean))].sort();
+  const decks       = (yL,eP,s) => [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)&&(!s||c.subject===s)).map(c=>c.deck).filter(Boolean))].sort();
 
-  // ── Start study ─────────────────────────────────────────────────────────────
-  const startStudy = (filter) => {
+  // ── CHANGE 2: Start study — due or all cards ───────────────────────────────
+  const startStudy = (filter, allCards = false) => {
     const f = filter || studyFilter;
-    const due = cards.filter(c => {
+    const pool = cards.filter(c => {
       if (f.yearLevel  && c.yearLevel  !== f.yearLevel)  return false;
       if (f.examPeriod && c.examPeriod !== f.examPeriod) return false;
       if (f.subject    && c.subject    !== f.subject)    return false;
       if (f.deck       && c.deck       !== f.deck)       return false;
-      return !c.nextReviewDate || c.nextReviewDate <= today;
+      if (!allCards) return !c.nextReviewDate || c.nextReviewDate <= today;
+      return true;
     });
-    if (!due.length) return;
-    setQueue(due); setQIdx(0); setFlipped(false);
-    setStudying(true); setCardKey(k=>k+1);
+    if (!pool.length) return;
+    setQueue(pool); setQIdx(0); setFlipped(false);
+    setStudying(true); setManualMode(allCards);
+    setCardKey(k=>k+1);
     sessionStart.current = Date.now();
     setTab("study");
   };
 
-  // ── Rate card ───────────────────────────────────────────────────────────────
+  // ── Rate card ──────────────────────────────────────────────────────────────
   const rateCard = async (rating) => {
     const card    = queue[qIdx];
     const updated = applySM2(card, rating);
@@ -368,7 +378,15 @@ function App() {
     else { setQIdx(next); setFlipped(false); setCardKey(k=>k+1); }
   };
 
-  // ── SIGN IN SCREEN ──────────────────────────────────────────────────────────
+  // ── Splash while attempting silent sign-in ─────────────────────────────────
+  if (silentTrying) return (
+    <div style={{ height:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:C.bg }}>
+      <div style={{ fontSize:56, marginBottom:16 }}>📚</div>
+      <p style={{ color:C.muted, fontSize:14 }}>Loading…</p>
+    </div>
+  );
+
+  // ── Sign in screen ─────────────────────────────────────────────────────────
   if (!authed) return (
     <div style={{ height:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"2rem", background:C.bg }}>
       <div style={{ textAlign:"center", marginBottom:"2rem" }}>
@@ -376,9 +394,11 @@ function App() {
         <h1 style={{ fontSize:28, fontWeight:800 }}>StudyFlow</h1>
         <p style={{ color:C.muted, fontSize:15, marginTop:4 }}>Shawn's revision companion</p>
       </div>
-
-      {error && <div style={{ background:"#FEE2E2", color:"#991B1B", borderRadius:12, padding:"10px 16px", fontSize:13, marginBottom:16, maxWidth:320, textAlign:"center" }}>{error}</div>}
-
+      {error && (
+        <div style={{ background:"#FEE2E2", color:"#991B1B", borderRadius:12, padding:"10px 16px", fontSize:13, marginBottom:16, maxWidth:320, textAlign:"center" }}>
+          {error}
+        </div>
+      )}
       <button
         onClick={handleAuth}
         disabled={authLoading}
@@ -387,11 +407,13 @@ function App() {
         <Ico n="google" size={20} color="#fff"/>
         {authLoading ? "Signing in…" : "Sign in with Google"}
       </button>
-      <p style={{ color:C.muted, fontSize:12, marginTop:16, textAlign:"center", maxWidth:280 }}>Your data lives in Google Sheets — nothing stored on this device.</p>
+      <p style={{ color:C.muted, fontSize:12, marginTop:16, textAlign:"center", maxWidth:280 }}>
+        Your data lives in Google Sheets — nothing stored on this device.
+      </p>
     </div>
   );
 
-  // ── STUDY ACTIVE ─────────────────────────────────────────────────────────────
+  // ── Study active screen ────────────────────────────────────────────────────
   if (studying && tab === "study") {
     const card      = queue[qIdx];
     const remaining = queue.length - qIdx;
@@ -403,20 +425,23 @@ function App() {
         <div style={{ padding:"16px 20px 10px", display:"flex", alignItems:"center", gap:12 }}>
           <button
             onClick={() => { setStudying(false); setTab("study"); }}
-            style={{ width:36, height:36, borderRadius:10, background:C.card, border:`1px solid #E8E8E4`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+            style={{ width:36, height:36, borderRadius:10, background:C.card, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
           >
             <Ico n="back" size={18} color={C.text}/>
           </button>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:12, color:C.muted, marginBottom:5, fontWeight:600 }}>{card.subject} · {card.deck}</div>
-            <div style={{ height:6, background:"#E8E8E4", borderRadius:3, overflow:"hidden" }}>
+            <div style={{ fontSize:12, color:C.muted, marginBottom:5, fontWeight:600 }}>
+              {card.subject} · {card.deck}
+              {manualMode && <span style={{ marginLeft:6, color:C.secondary, fontSize:11 }}>📝 Manual</span>}
+            </div>
+            <div style={{ height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
               <div style={{ height:"100%", width:`${progress}%`, background:C.primary, borderRadius:3, transition:"width 0.4s ease" }}/>
             </div>
           </div>
           <span style={{ fontSize:13, fontWeight:700, color:C.muted, minWidth:48, textAlign:"right" }}>{remaining} left</span>
         </div>
 
-        {/* Card area */}
+        {/* Card */}
         <div style={{ flex:1, padding:"8px 20px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <div
             key={cardKey}
@@ -424,17 +449,17 @@ function App() {
             style={{ flex:1, background:C.card, borderRadius:24, padding:"2rem 1.5rem", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", minHeight:0 }}
           >
             <div style={{ position:"absolute", top:16, left:0, right:0, textAlign:"center" }}>
-              <span style={{ fontSize:11, fontWeight:700, letterSpacing:1.5, color: flipped ? C.muted : C.primary, textTransform:"uppercase" }}>
+              <span style={{ fontSize:11, fontWeight:700, letterSpacing:1.5, color:flipped?C.muted:C.primary, textTransform:"uppercase" }}>
                 {flipped ? "Answer" : "Question"}
               </span>
             </div>
-            <p style={{ fontSize: flipped?18:22, fontWeight: flipped?500:700, textAlign:"center", lineHeight:1.6, color:C.text, overflowY:"auto", maxHeight:"100%" }}>
+            <p style={{ fontSize:flipped?18:22, fontWeight:flipped?500:700, textAlign:"center", lineHeight:1.6, color:C.text, overflowY:"auto", maxHeight:"100%" }}>
               {flipped ? card.back : card.front}
             </p>
           </div>
 
-          {/* Action buttons */}
-          <div style={{ paddingTop:16, paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+          {/* Buttons */}
+          <div style={{ paddingTop:16, paddingBottom:"max(16px, env(safe-area-inset-bottom))" }}>
             {!flipped ? (
               <button
                 onClick={() => setFlipped(true)}
@@ -461,10 +486,9 @@ function App() {
     );
   }
 
-  // ── SHELL ─────────────────────────────────────────────────────────────────────
+  // ── Main shell ─────────────────────────────────────────────────────────────
   return (
     <div style={{ height:"100vh", display:"flex", flexDirection:"column", maxWidth:480, margin:"0 auto" }}>
-      {/* Loading / Error banner */}
       {loading && (
         <div style={{ padding:"12px 20px", display:"flex", alignItems:"center", gap:8, background:"#F0F4F0", borderBottom:`1px solid #E0E8E0` }}>
           <Ico n="refresh" size={16} color={C.primary}/>
@@ -477,20 +501,19 @@ function App() {
         </div>
       )}
 
-      {/* Screen content */}
       <div style={{ flex:1, overflowY:"auto", paddingBottom:72 }}>
-        {tab === "home"     && <HomeScreen     cards={cards} dueCards={dueCards} streak={streak} todayLogs={todayLogs} onStart={startStudy} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects} decks={decks} today={today}/>}
-        {tab === "study"    && <StudyScreen    cards={cards} dueCards={dueCards} filter={studyFilter} setFilter={setStudyFilter} onStart={startStudy} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects} decks={decks} today={today}/>}
-        {tab === "notes"    && <NotesScreen    notes={notes} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects}/>}
-        {tab === "progress" && <ProgressScreen cards={cards} logs={logs} streak={streak} todayLogs={todayLogs} dueCards={dueCards} today={today}/>}
+        {tab==="home"     && <HomeScreen     cards={cards} dueCards={dueCards} streak={streak} todayLogs={todayLogs} onStart={startStudy} today={today}/>}
+        {tab==="study"    && <StudyScreen    cards={cards} dueCards={dueCards} filter={studyFilter} setFilter={setStudyFilter} onStart={startStudy} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects} decks={decks} today={today}/>}
+        {tab==="notes"    && <NotesScreen    notes={notes} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects}/>}
+        {tab==="progress" && <ProgressScreen cards={cards} logs={logs} streak={streak} todayLogs={todayLogs} dueCards={dueCards} today={today}/>}
       </div>
 
       {/* Bottom nav */}
-      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:C.navBg, borderTop:`1px solid #EBEBЕ7`, display:"flex", paddingBottom:"env(safe-area-inset-bottom)" }}>
+      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:C.navBg, borderTop:`1px solid ${C.border}`, display:"flex", paddingBottom:"env(safe-area-inset-bottom)" }}>
         {[["home","home","Home"],["study","cards","Study"],["notes","notes","Notes"],["progress","chart","Progress"]].map(([id,icon,label]) => (
-          <button key={id} onClick={() => { setTab(id); setStudying(false); }} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"10px 0", color: tab===id ? C.primary : C.muted, transition:"color 0.15s" }}>
-            <Ico n={icon} size={22} color={tab===id ? C.primary : C.muted}/>
-            <span style={{ fontSize:11, fontWeight: tab===id?700:500 }}>{label}</span>
+          <button key={id} onClick={() => { setTab(id); setStudying(false); }} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"10px 0", color:tab===id?C.primary:C.muted, transition:"color 0.15s" }}>
+            <Ico n={icon} size={22} color={tab===id?C.primary:C.muted}/>
+            <span style={{ fontSize:11, fontWeight:tab===id?700:500 }}>{label}</span>
           </button>
         ))}
       </div>
@@ -499,7 +522,7 @@ function App() {
 }
 
 // ── HOME SCREEN ───────────────────────────────────────────────────────────────
-function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, yearLevels, examPeriods, subjects, decks, today }) {
+function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, today }) {
   const decksDue = useMemo(() => {
     const map = {};
     dueCards.forEach(c => {
@@ -515,35 +538,32 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, yearLevels, e
       <h1 style={{ fontSize:26, fontWeight:800 }}>Hey Shawn 👋</h1>
       <p style={{ color:C.muted, fontSize:15, marginTop:2, marginBottom:20 }}>Ready to study?</p>
 
-      {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
-        <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid #EBEBЕ7` }}>
+        <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:12, color:C.muted, fontWeight:600, marginBottom:4 }}>Due today</p>
           <p style={{ fontSize:30, fontWeight:800, color:C.secondary, lineHeight:1 }}>{dueCards.length}</p>
         </div>
-        <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid #EBEBЕ7` }}>
+        <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:12, color:C.muted, fontWeight:600, marginBottom:4 }}>Streak 🔥</p>
           <p style={{ fontSize:30, fontWeight:800, color:C.orange, lineHeight:1 }}>{streak}<span style={{ fontSize:14, fontWeight:600, marginLeft:2 }}>days</span></p>
         </div>
       </div>
 
-      {/* Quick start */}
       {dueCards.length > 0 ? (
         <button
-          onClick={() => onStart({})}
+          onClick={() => onStart({}, false)}
           style={{ width:"100%", padding:18, borderRadius:18, background:C.primary, color:"#fff", fontSize:17, fontWeight:800, marginBottom:20, boxShadow:`0 4px 16px ${C.primary}40` }}
         >
           ✨ Start Studying ({dueCards.length} cards)
         </button>
       ) : (
-        <div style={{ background:C.card, borderRadius:18, padding:"1.5rem", textAlign:"center", marginBottom:20, border:`1px solid #EBEBЕ7` }}>
+        <div style={{ background:C.card, borderRadius:18, padding:"1.5rem", textAlign:"center", marginBottom:20, border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:36, marginBottom:8 }}>🎉</p>
           <p style={{ fontWeight:800 }}>All caught up!</p>
           <p style={{ fontSize:14, color:C.muted, marginTop:4 }}>No cards due today.</p>
         </div>
       )}
 
-      {/* Deck quick access */}
       {decksDue.length > 0 && (
         <>
           <p style={{ fontSize:13, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:0.8, marginBottom:10 }}>Due by deck</p>
@@ -551,8 +571,8 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, yearLevels, e
             {decksDue.map(d => (
               <button
                 key={`${d.yearLevel}${d.examPeriod}${d.subject}${d.deck}`}
-                onClick={() => onStart({ yearLevel:d.yearLevel, examPeriod:d.examPeriod, subject:d.subject, deck:d.deck })}
-                style={{ background:C.card, border:`1px solid #EBEBЕ7`, borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", textAlign:"left" }}
+                onClick={() => onStart({ yearLevel:d.yearLevel, examPeriod:d.examPeriod, subject:d.subject, deck:d.deck }, false)}
+                style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", textAlign:"left" }}
               >
                 <div>
                   <div style={{ fontSize:14, fontWeight:700 }}>{d.deck}</div>
@@ -574,7 +594,15 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, yearLevels, e
 // ── STUDY SCREEN ──────────────────────────────────────────────────────────────
 function StudyScreen({ cards, dueCards, filter, setFilter, onStart, yearLevels, examPeriods, subjects, decks, today }) {
   const f = filter;
+
   const filteredDue = dueCards.filter(c =>
+    (!f.yearLevel  || c.yearLevel  === f.yearLevel)  &&
+    (!f.examPeriod || c.examPeriod === f.examPeriod) &&
+    (!f.subject    || c.subject    === f.subject)    &&
+    (!f.deck       || c.deck       === f.deck)
+  );
+
+  const filteredAll = cards.filter(c =>
     (!f.yearLevel  || c.yearLevel  === f.yearLevel)  &&
     (!f.examPeriod || c.examPeriod === f.examPeriod) &&
     (!f.subject    || c.subject    === f.subject)    &&
@@ -585,28 +613,45 @@ function StudyScreen({ cards, dueCards, filter, setFilter, onStart, yearLevels, 
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
       <h1 style={{ fontSize:22, fontWeight:800, marginBottom:20 }}>Study 🎴</h1>
 
-      <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid #EBEBЕ7`, marginBottom:16 }}>
-        <FilterSelect label="Year Level"  value={f.yearLevel}  options={yearLevels}                           onChange={v => setFilter({ yearLevel:v, examPeriod:"", subject:"", deck:"" })}/>
-        <FilterSelect label="Exam Period" value={f.examPeriod} options={examPeriods(f.yearLevel)}              onChange={v => setFilter({ ...f, examPeriod:v, subject:"", deck:"" })}/>
-        <FilterSelect label="Subject"     value={f.subject}    options={subjects(f.yearLevel, f.examPeriod)}   onChange={v => setFilter({ ...f, subject:v, deck:"" })}/>
-        <FilterSelect label="Deck"        value={f.deck}       options={decks(f.yearLevel, f.examPeriod, f.subject)} onChange={v => setFilter({ ...f, deck:v })} style={{ marginBottom:0 }}/>
+      <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid ${C.border}`, marginBottom:16 }}>
+        <FilterSelect label="Year Level"  value={f.yearLevel}  options={yearLevels}                                onChange={v => setFilter({ yearLevel:v, examPeriod:"", subject:"", deck:"" })}/>
+        <FilterSelect label="Exam Period" value={f.examPeriod} options={examPeriods(f.yearLevel)}                  onChange={v => setFilter({ ...f, examPeriod:v, subject:"", deck:"" })}/>
+        <FilterSelect label="Subject"     value={f.subject}    options={subjects(f.yearLevel, f.examPeriod)}        onChange={v => setFilter({ ...f, subject:v, deck:"" })}/>
+        <FilterSelect label="Deck"        value={f.deck}       options={decks(f.yearLevel, f.examPeriod, f.subject)} onChange={v => setFilter({ ...f, deck:v })}/>
       </div>
 
-      <div style={{ background:`${C.secondary}15`, borderRadius:14, padding:"14px 18px", marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <div>
-          <p style={{ fontSize:12, color:C.muted, fontWeight:600 }}>Cards due</p>
-          <p style={{ fontSize:30, fontWeight:800 }}>{filteredDue.length}</p>
-        </div>
-        <span style={{ fontSize:40 }}>📚</span>
-      </div>
-
+      {/* Due cards button */}
       <button
-        onClick={() => onStart(f)}
+        onClick={() => onStart(f, false)}
         disabled={filteredDue.length === 0}
-        style={{ width:"100%", padding:16, borderRadius:16, background: filteredDue.length===0 ? "#E0E0DC" : C.primary, color: filteredDue.length===0 ? C.muted : "#fff", fontSize:16, fontWeight:800 }}
+        style={{
+          width:"100%", padding:16, borderRadius:16, marginBottom:10,
+          background: filteredDue.length===0 ? "#E0E0DC" : C.primary,
+          color: filteredDue.length===0 ? C.muted : "#fff",
+          fontSize:15, fontWeight:800,
+        }}
       >
-        {filteredDue.length === 0 ? "No cards due" : `Start session (${filteredDue.length} cards)`}
+        {filteredDue.length === 0 ? "No cards due today" : `📅 Start Session — ${filteredDue.length} due today`}
       </button>
+
+      {/* Manual revision button — always active if cards exist */}
+      <button
+        onClick={() => onStart(f, true)}
+        disabled={filteredAll.length === 0}
+        style={{
+          width:"100%", padding:16, borderRadius:16,
+          background: filteredAll.length===0 ? "#E0E0DC" : C.card,
+          color: filteredAll.length===0 ? C.muted : C.secondary,
+          fontSize:15, fontWeight:800,
+          border:`2px solid ${filteredAll.length===0 ? "#E0E0DC" : C.secondary}`,
+        }}
+      >
+        {filteredAll.length === 0 ? "No cards found" : `📝 Revise Deck — ${filteredAll.length} cards`}
+      </button>
+
+      <p style={{ fontSize:12, color:C.muted, textAlign:"center", marginTop:10, lineHeight:1.5 }}>
+        Revise Deck ignores due dates — use it anytime for extra practice.
+      </p>
     </div>
   );
 }
@@ -630,7 +675,7 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
   const Chip = ({ label, active, onPress }) => (
     <button
       onClick={onPress}
-      style={{ padding:"6px 14px", borderRadius:20, whiteSpace:"nowrap", fontSize:13, fontWeight:700, border:`1.5px solid ${active ? C.secondary : "#E0E0DC"}`, background: active ? C.secondary : C.card, color: active ? "#fff" : C.muted, transition:"all 0.15s" }}
+      style={{ padding:"6px 14px", borderRadius:20, whiteSpace:"nowrap", fontSize:13, fontWeight:700, border:`1.5px solid ${active?C.secondary:"#E0E0DC"}`, background:active?C.secondary:C.card, color:active?"#fff":C.muted, transition:"all 0.15s" }}
     >
       {label}
     </button>
@@ -640,35 +685,33 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
       <h1 style={{ fontSize:22, fontWeight:800, marginBottom:16 }}>Notes 📖</h1>
 
-      {/* Filters */}
       <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:6 }}>
-        {yearLevels.map(y => <Chip key={y} label={y} active={f.yearLevel===y} onPress={() => setF(f.yearLevel===y ? {yearLevel:"",examPeriod:"",subject:""} : {yearLevel:y,examPeriod:"",subject:""})}/>)}
+        {yearLevels.map(y => <Chip key={y} label={y} active={f.yearLevel===y} onPress={() => setF(f.yearLevel===y?{yearLevel:"",examPeriod:"",subject:""}:{yearLevel:y,examPeriod:"",subject:""})}/>)}
       </div>
       {f.yearLevel && (
         <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:6 }}>
-          {examPeriods(f.yearLevel).map(e => <Chip key={e} label={e} active={f.examPeriod===e} onPress={() => setF(f.examPeriod===e ? {...f,examPeriod:"",subject:""} : {...f,examPeriod:e,subject:""})}/>)}
+          {examPeriods(f.yearLevel).map(e => <Chip key={e} label={e} active={f.examPeriod===e} onPress={() => setF(f.examPeriod===e?{...f,examPeriod:"",subject:""}:{...f,examPeriod:e,subject:""})}/>)}
         </div>
       )}
-      {(f.yearLevel || f.examPeriod) && (
+      {(f.yearLevel||f.examPeriod) && (
         <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:12 }}>
-          {subjects(f.yearLevel, f.examPeriod).map(s => <Chip key={s} label={s} active={f.subject===s} onPress={() => setF(f.subject===s ? {...f,subject:""} : {...f,subject:s})}/>)}
+          {subjects(f.yearLevel,f.examPeriod).map(s => <Chip key={s} label={s} active={f.subject===s} onPress={() => setF(f.subject===s?{...f,subject:""}:{...f,subject:s})}/>)}
         </div>
       )}
 
-      {/* List */}
       {Object.keys(grouped).length === 0 ? (
         <div style={{ textAlign:"center", color:C.muted, padding:"3rem 0" }}>
           <p style={{ fontSize:40, marginBottom:8 }}>🗒️</p>
           <p style={{ fontWeight:700, color:C.text }}>No notes yet</p>
           <p style={{ fontSize:14, marginTop:4 }}>Add entries to the Notes tab in Google Sheets</p>
         </div>
-      ) : Object.entries(grouped).map(([subj, chaps]) => (
+      ) : Object.entries(grouped).map(([subj,chaps]) => (
         <div key={subj} style={{ marginBottom:20 }}>
           <p style={{ fontSize:12, fontWeight:700, color:C.primary, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>{subj}</p>
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {chaps.map((n,i) => (
               <a key={i} href={n.docLink} target="_blank" rel="noopener noreferrer"
-                style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", background:C.card, borderRadius:14, border:`1px solid #EBEBЕ7` }}
+                style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", background:C.card, borderRadius:14, border:`1px solid ${C.border}` }}
               >
                 <div>
                   <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{n.chapter}</div>
@@ -691,7 +734,7 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
     for (let i=6; i>=0; i--) {
       const d = new Date(); d.setDate(d.getDate()-i);
       const ds = d.toISOString().split("T")[0];
-      days.push({ date:ds, count: logs.filter(l=>l.date===ds).length, label: i===0?"Today":d.toLocaleDateString("en-MY",{weekday:"short"}) });
+      days.push({ date:ds, count:logs.filter(l=>l.date===ds).length, label:i===0?"Today":d.toLocaleDateString("en-MY",{weekday:"short"}) });
     }
     return days;
   }, [logs]);
@@ -713,33 +756,30 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
       <h1 style={{ fontSize:22, fontWeight:800, marginBottom:20 }}>Progress 📊</h1>
 
-      {/* Top stats */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:20 }}>
         {[[streak,"Streak","days",C.orange],[todayLogs.length,"Today","cards",C.primary],[dueCards.length,"Due","cards",C.secondary]].map(([val,label,unit,color]) => (
-          <div key={label} style={{ background:C.card, borderRadius:14, padding:"12px 10px", border:`1px solid #EBEBЕ7`, textAlign:"center" }}>
+          <div key={label} style={{ background:C.card, borderRadius:14, padding:"12px 10px", border:`1px solid ${C.border}`, textAlign:"center" }}>
             <p style={{ fontSize:24, fontWeight:800, color, lineHeight:1 }}>{val}</p>
             <p style={{ fontSize:10, color:C.muted, fontWeight:700, marginTop:3, lineHeight:1.4 }}>{label}<br/>{unit}</p>
           </div>
         ))}
       </div>
 
-      {/* Bar chart */}
-      <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid #EBEBЕ7`, marginBottom:16 }}>
+      <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid ${C.border}`, marginBottom:16 }}>
         <p style={{ fontSize:14, fontWeight:700, marginBottom:16 }}>Cards reviewed — last 7 days</p>
         <div style={{ display:"flex", alignItems:"flex-end", gap:6, height:100 }}>
           {last7.map(({date,count,label}) => (
             <div key={date} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-              <span style={{ fontSize:10, fontWeight:700, color: count>0?C.primary:C.muted, minHeight:14 }}>{count||""}</span>
-              <div style={{ width:"100%", borderRadius:5, background: count>0?C.primary:"#EBEBЕ7", height:`${Math.max(4,(count/maxCount)*72)}px`, transition:"height 0.4s ease" }}/>
+              <span style={{ fontSize:10, fontWeight:700, color:count>0?C.primary:C.muted, minHeight:14 }}>{count||""}</span>
+              <div style={{ width:"100%", borderRadius:5, background:count>0?C.primary:C.border, height:`${Math.max(4,(count/maxCount)*72)}px`, transition:"height 0.4s ease" }}/>
               <span style={{ fontSize:10, color:C.muted, fontWeight:600 }}>{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Deck breakdown */}
       {deckStats.length > 0 && (
-        <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid #EBEBЕ7` }}>
+        <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:14, fontWeight:700, marginBottom:16 }}>Deck breakdown</p>
           {deckStats.map(({k,total,due}) => (
             <div key={k} style={{ marginBottom:14 }}>
@@ -747,7 +787,7 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
                 <span style={{ fontSize:13, fontWeight:600 }}>{k}</span>
                 <span style={{ fontSize:12, color:C.muted }}>{due} due / {total}</span>
               </div>
-              <div style={{ height:6, background:"#EBEBЕ7", borderRadius:3, overflow:"hidden" }}>
+              <div style={{ height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
                 <div style={{ height:"100%", width:`${total>0?((total-due)/total)*100:0}%`, background:C.primary, borderRadius:3, transition:"width 0.6s ease" }}/>
               </div>
             </div>
