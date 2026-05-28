@@ -25,8 +25,10 @@
     overflow: hidden;
     position: fixed;
     width: 100%;
+    /* Issue 1: iPhone Safari safe area */
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  #root { overflow: hidden; }
+  #root { overflow: hidden; height: 100%; }
   button { font-family: 'Nunito', sans-serif; cursor: pointer; border: none; background: none; }
   select, input { font-family: 'Nunito', sans-serif; }
   a { text-decoration: none; }
@@ -42,13 +44,35 @@
     50%  { transform: rotateY(90deg); opacity: 0.4; }
     100% { transform: rotateY(0deg); opacity: 1; }
   }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50%       { transform: scale(1.04); }
-  }
   .fade-up   { animation: fadeUp 0.25s ease both; }
   .flip-anim { animation: flipCard 0.35s ease both; }
-  .pulse     { animation: pulse 0.3s ease; }
+
+  /* Issue 1: push content above Safari bottom bar */
+  .screen-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-top: 1px solid #E8E8E4;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+  }
+  .study-buttons {
+    padding-top: 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: 0;
+    padding-right: 0;
+  }
 </style>
 </head>
 <body>
@@ -61,12 +85,12 @@ const { useState, useEffect, useCallback, useMemo, useRef } = React;
 const SHEET_ID  = "1igXw6erw9gLv8gMKmyuIh5v1tm832RPWoHEeSkeuMws";
 const CLIENT_ID = "1010155063550-4fabe4f96jhvuoa3euiknkett484gsp5.apps.googleusercontent.com";
 const SCOPES    = "https://www.googleapis.com/auth/spreadsheets";
+const NEW_CARD_CAP = 5; // Issue 3: max new cards per session
 
 const CARDS_SHEET = "Cards";
 const LOG_SHEET   = "Progress Log";
 const NOTES_SHEET = "Notes";
 
-// ── COLOURS ───────────────────────────────────────────────────────────────────
 const C = {
   bg:        "#FAFAF7",
   primary:   "#8BAF8B",
@@ -80,7 +104,6 @@ const C = {
   text:      "#2D2D2D",
   muted:     "#7A7A7A",
   orange:    "#F0833A",
-  navBg:     "#FFFFFF",
 };
 
 // ── SM-2 ──────────────────────────────────────────────────────────────────────
@@ -164,7 +187,6 @@ function parseCards(rows) {
     _row: i + 2,
   }));
 }
-
 function parseNotes(rows) {
   if (rows.length < 2) return [];
   return rows.slice(1).map(r => ({
@@ -175,7 +197,6 @@ function parseNotes(rows) {
     docLink:    r[4] || "",
   }));
 }
-
 function parseLogs(rows) {
   if (rows.length < 2) return [];
   return rows.slice(1).map(r => ({
@@ -184,6 +205,42 @@ function parseLogs(rows) {
     rating:    r[2] || "",
     timeSpent: r[3] || "",
   }));
+}
+
+// ── ISSUE 4: TEXT TO SPEECH ───────────────────────────────────────────────────
+function detectLang(text) {
+  // Check for Chinese characters
+  if (/[\u4e00-\u9fff\u3400-\u4dbf]/.test(text)) return "zh";
+  // Check for Malay keywords / common BM patterns
+  if (/\b(yang|dan|di|ke|dari|untuk|dengan|pada|adalah|ini|itu|tidak|boleh|akan|telah|dalam|juga)\b/i.test(text)) return "ms";
+  return "en";
+}
+
+function speak(text, onEnd) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const lang = detectLang(text);
+  const utter = new SpeechSynthesisUtterance(text);
+
+  // Try to find a matching voice
+  const voices = window.speechSynthesis.getVoices();
+  const langMap = { zh: ["zh-CN","zh-TW","zh"], ms: ["ms-MY","ms"], en: ["en-GB","en-US","en"] };
+  const preferred = langMap[lang] || ["en"];
+  let voice = null;
+  for (const code of preferred) {
+    voice = voices.find(v => v.lang.startsWith(code));
+    if (voice) break;
+  }
+  if (voice) utter.voice = voice;
+  utter.lang  = lang === "zh" ? "zh-CN" : lang === "ms" ? "ms-MY" : "en-US";
+  utter.rate  = 0.9;
+  utter.pitch = 1;
+  if (onEnd) utter.onend = onEnd;
+  window.speechSynthesis.speak(utter);
+}
+
+function stopSpeak() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
 }
 
 // ── ICONS ─────────────────────────────────────────────────────────────────────
@@ -199,8 +256,11 @@ function Ico({ n, size=22, color }) {
     chev:    <polyline {...p} points="9 18 15 12 9 6"/>,
     refresh: <><polyline {...p} points="23 4 23 10 17 10"/><path {...p} d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
     google:  <path fill={color||"white"} stroke="none" d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.908 8.908 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>,
+    // Speaker icons
+    speaker: <><polygon {...p} points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path {...p} d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path {...p} d="M15.54 8.46a5 5 0 0 1 0 7.07"/></>,
+    speakerOff: <><polygon {...p} points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line {...p} x1="23" y1="9" x2="17" y2="15"/><line {...p} x1="17" y1="9" x2="23" y2="15"/></>,
   };
-  return <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block"}} aria-hidden="true">{icons[n]}</svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block",flexShrink:0}} aria-hidden="true">{icons[n]}</svg>;
 }
 
 // ── FILTER SELECT ─────────────────────────────────────────────────────────────
@@ -231,14 +291,12 @@ function App() {
   const [tab,         setTab]         = useState("home");
   const [authed,      setAuthed]      = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [silentTrying,setSilentTrying]= useState(true);
   const [cards,       setCards]       = useState([]);
   const [notes,       setNotes]       = useState([]);
   const [logs,        setLogs]        = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState(null);
 
-  // Study state
   const [studyFilter, setStudyFilter] = useState({ yearLevel:"", examPeriod:"", subject:"", deck:"" });
   const [queue,       setQueue]       = useState([]);
   const [qIdx,        setQIdx]        = useState(0);
@@ -246,6 +304,7 @@ function App() {
   const [studying,    setStudying]    = useState(false);
   const [cardKey,     setCardKey]     = useState(0);
   const [manualMode,  setManualMode]  = useState(false);
+  const [speaking,    setSpeaking]    = useState(false);
   const sessionStart = useRef(null);
 
   const today = useMemo(() => {
@@ -253,45 +312,65 @@ function App() {
     return d.toISOString().split("T")[0];
   }, []);
 
-  // ── CHANGE 1: Stay logged in ───────────────────────────────────────────────
-  // Load GSI script, then try silent token refresh using stored hint
+  // ── ISSUE 2: Persist token in localStorage ─────────────────────────────────
   useEffect(() => {
+    // Check for saved token first
+    const saved = localStorage.getItem("sf_token");
+    const expiry = localStorage.getItem("sf_token_expiry");
+    if (saved && expiry && Date.now() < parseInt(expiry)) {
+      window._gToken = saved;
+      setAuthed(true);
+    }
+
+    // Load GSI script
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
     s.onload = () => {
-      const hint = localStorage.getItem("sf_user_hint") || "";
       window._tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        hint,
         callback: resp => {
           if (resp.access_token) {
             window._gToken = resp.access_token;
-            // Save hint for next silent attempt
-            if (resp.email) localStorage.setItem("sf_user_hint", resp.email);
+            // Save token with 55-minute expiry (tokens last 60min, refresh at 55)
+            localStorage.setItem("sf_token", resp.access_token);
+            localStorage.setItem("sf_token_expiry", String(Date.now() + 55 * 60 * 1000));
             setAuthed(true);
             setAuthLoading(false);
-            setSilentTrying(false);
           } else {
             setAuthLoading(false);
-            setSilentTrying(false);
           }
         },
       });
-      // Try silent sign-in if we have a previous hint
-      if (hint) {
-        window._tokenClient.requestAccessToken({ prompt: "" });
-      } else {
-        setSilentTrying(false);
-      }
     };
     document.head.appendChild(s);
   }, []);
+
+  // Auto-refresh token before it expires
+  useEffect(() => {
+    if (!authed) return;
+    const expiry = parseInt(localStorage.getItem("sf_token_expiry") || "0");
+    const msLeft = expiry - Date.now();
+    if (msLeft <= 0) return;
+    // Schedule silent refresh 2 min before expiry
+    const timer = setTimeout(() => {
+      window._tokenClient?.requestAccessToken({ prompt: "" });
+    }, Math.max(0, msLeft - 2 * 60 * 1000));
+    return () => clearTimeout(timer);
+  }, [authed]);
 
   const handleAuth = () => {
     setAuthLoading(true);
     setError(null);
     window._tokenClient?.requestAccessToken({ prompt: "consent" });
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("sf_token");
+    localStorage.removeItem("sf_token_expiry");
+    window._gToken = null;
+    setAuthed(false);
+    setCards([]); setNotes([]); setLogs([]);
   };
 
   // ── Load data ──────────────────────────────────────────────────────────────
@@ -306,16 +385,28 @@ function App() {
       setCards(parseCards(cr));
       setNotes(parseNotes(nr));
       setLogs(parseLogs(lr));
-    } catch(e) { setError(e.message); }
-    finally    { setLoading(false); }
+    } catch(e) {
+      // If 401, token expired — clear and re-auth
+      if (e.message.includes("401")) {
+        handleSignOut();
+      } else {
+        setError(e.message);
+      }
+    }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { if (authed) loadData(); }, [authed]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
+  const today2 = today; // alias
   const dueCards = useMemo(
-    () => cards.filter(c => !c.nextReviewDate || c.nextReviewDate <= today),
-    [cards, today]
+    () => cards.filter(c => c.nextReviewDate && c.nextReviewDate <= today2 && c.repCount !== "0"),
+    [cards, today2]
+  );
+  const newCards = useMemo(
+    () => cards.filter(c => !c.nextReviewDate || c.nextReviewDate === "" || c.repCount === "0"),
+    [cards]
   );
 
   const streak = useMemo(() => {
@@ -330,33 +421,47 @@ function App() {
 
   const todayLogs = useMemo(() => logs.filter(l => l.date === today), [logs, today]);
 
-  // Filter helpers
   const yearLevels  = [...new Set(cards.map(c=>c.yearLevel).filter(Boolean))].sort();
   const examPeriods = (yL)      => [...new Set(cards.filter(c=>!yL||c.yearLevel===yL).map(c=>c.examPeriod).filter(Boolean))].sort();
   const subjects    = (yL,eP)   => [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)).map(c=>c.subject).filter(Boolean))].sort();
   const decks       = (yL,eP,s) => [...new Set(cards.filter(c=>(!yL||c.yearLevel===yL)&&(!eP||c.examPeriod===eP)&&(!s||c.subject===s)).map(c=>c.deck).filter(Boolean))].sort();
 
-  // ── CHANGE 2: Start study — due or all cards ───────────────────────────────
-  const startStudy = (filter, allCards = false) => {
+  // ── ISSUE 3: Build session queue with new card cap ─────────────────────────
+  const buildQueue = (filter, allCards = false) => {
     const f = filter || studyFilter;
-    const pool = cards.filter(c => {
-      if (f.yearLevel  && c.yearLevel  !== f.yearLevel)  return false;
-      if (f.examPeriod && c.examPeriod !== f.examPeriod) return false;
-      if (f.subject    && c.subject    !== f.subject)    return false;
-      if (f.deck       && c.deck       !== f.deck)       return false;
-      if (!allCards) return !c.nextReviewDate || c.nextReviewDate <= today;
-      return true;
-    });
+    const match = c =>
+      (!f.yearLevel  || c.yearLevel  === f.yearLevel)  &&
+      (!f.examPeriod || c.examPeriod === f.examPeriod) &&
+      (!f.subject    || c.subject    === f.subject)    &&
+      (!f.deck       || c.deck       === f.deck);
+
+    if (allCards) {
+      return cards.filter(match);
+    }
+
+    // Due cards (already reviewed before, due today)
+    const due = cards.filter(c => match(c) && c.nextReviewDate && c.nextReviewDate <= today && c.repCount !== "0");
+    // New cards (never reviewed) — cap at NEW_CARD_CAP
+    const newOnes = cards.filter(c => match(c) && (!c.nextReviewDate || c.nextReviewDate === "" || c.repCount === "0"))
+                         .slice(0, NEW_CARD_CAP);
+    return [...due, ...newOnes];
+  };
+
+  const startStudy = (filter, allCards = false) => {
+    const pool = buildQueue(filter, allCards);
     if (!pool.length) return;
     setQueue(pool); setQIdx(0); setFlipped(false);
     setStudying(true); setManualMode(allCards);
     setCardKey(k=>k+1);
     sessionStart.current = Date.now();
+    setSpeaking(false);
+    stopSpeak();
     setTab("study");
   };
 
   // ── Rate card ──────────────────────────────────────────────────────────────
   const rateCard = async (rating) => {
+    stopSpeak(); setSpeaking(false);
     const card    = queue[qIdx];
     const updated = applySM2(card, rating);
     const spent   = Math.round((Date.now() - (sessionStart.current || Date.now())) / 1000);
@@ -378,13 +483,16 @@ function App() {
     else { setQIdx(next); setFlipped(false); setCardKey(k=>k+1); }
   };
 
-  // ── Splash while attempting silent sign-in ─────────────────────────────────
-  if (silentTrying) return (
-    <div style={{ height:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:C.bg }}>
-      <div style={{ fontSize:56, marginBottom:16 }}>📚</div>
-      <p style={{ color:C.muted, fontSize:14 }}>Loading…</p>
-    </div>
-  );
+  // ── ISSUE 4: Speak handler ─────────────────────────────────────────────────
+  const handleSpeak = (text) => {
+    if (speaking) {
+      stopSpeak();
+      setSpeaking(false);
+    } else {
+      setSpeaking(true);
+      speak(text, () => setSpeaking(false));
+    }
+  };
 
   // ── Sign in screen ─────────────────────────────────────────────────────────
   if (!authed) return (
@@ -418,13 +526,14 @@ function App() {
     const card      = queue[qIdx];
     const remaining = queue.length - qIdx;
     const progress  = (qIdx / queue.length) * 100;
+    const currentText = flipped ? card.back : card.front;
 
     return (
       <div style={{ height:"100vh", display:"flex", flexDirection:"column", background:C.bg }}>
         {/* Header */}
         <div style={{ padding:"16px 20px 10px", display:"flex", alignItems:"center", gap:12 }}>
           <button
-            onClick={() => { setStudying(false); setTab("study"); }}
+            onClick={() => { stopSpeak(); setSpeaking(false); setStudying(false); setTab("study"); }}
             style={{ width:36, height:36, borderRadius:10, background:C.card, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
           >
             <Ico n="back" size={18} color={C.text}/>
@@ -448,21 +557,38 @@ function App() {
             className={flipped ? "flip-anim" : "fade-up"}
             style={{ flex:1, background:C.card, borderRadius:24, padding:"2rem 1.5rem", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", position:"relative", minHeight:0 }}
           >
+            {/* Label */}
             <div style={{ position:"absolute", top:16, left:0, right:0, textAlign:"center" }}>
               <span style={{ fontSize:11, fontWeight:700, letterSpacing:1.5, color:flipped?C.muted:C.primary, textTransform:"uppercase" }}>
                 {flipped ? "Answer" : "Question"}
               </span>
             </div>
-            <p style={{ fontSize:flipped?18:22, fontWeight:flipped?500:700, textAlign:"center", lineHeight:1.6, color:C.text, overflowY:"auto", maxHeight:"100%" }}>
-              {flipped ? card.back : card.front}
+
+            {/* ISSUE 4: Speaker button top-right */}
+            <button
+              onClick={() => handleSpeak(currentText)}
+              style={{
+                position:"absolute", top:12, right:16,
+                width:36, height:36, borderRadius:10,
+                background: speaking ? `${C.primary}20` : "transparent",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                border: speaking ? `1.5px solid ${C.primary}` : "1.5px solid transparent",
+                transition:"all 0.2s",
+              }}
+            >
+              <Ico n={speaking ? "speakerOff" : "speaker"} size={18} color={speaking ? C.primary : C.muted}/>
+            </button>
+
+            <p style={{ fontSize:flipped?18:22, fontWeight:flipped?500:700, textAlign:"center", lineHeight:1.6, color:C.text, overflowY:"auto", maxHeight:"100%", padding:"0 8px" }}>
+              {currentText}
             </p>
           </div>
 
-          {/* Buttons */}
-          <div style={{ paddingTop:16, paddingBottom:"max(16px, env(safe-area-inset-bottom))" }}>
+          {/* Buttons — ISSUE 1: safe area bottom */}
+          <div className="study-buttons">
             {!flipped ? (
               <button
-                onClick={() => setFlipped(true)}
+                onClick={() => { setSpeaking(false); stopSpeak(); setFlipped(true); }}
                 style={{ width:"100%", padding:16, borderRadius:16, background:C.primary, color:"#fff", fontSize:16, fontWeight:800 }}
               >
                 Reveal Answer
@@ -487,6 +613,8 @@ function App() {
   }
 
   // ── Main shell ─────────────────────────────────────────────────────────────
+  const allDueCount = [...dueCards, ...newCards.slice(0, NEW_CARD_CAP)].length;
+
   return (
     <div style={{ height:"100vh", display:"flex", flexDirection:"column", maxWidth:480, margin:"0 auto" }}>
       {loading && (
@@ -501,17 +629,17 @@ function App() {
         </div>
       )}
 
-      <div style={{ flex:1, overflowY:"auto", paddingBottom:72 }}>
-        {tab==="home"     && <HomeScreen     cards={cards} dueCards={dueCards} streak={streak} todayLogs={todayLogs} onStart={startStudy} today={today}/>}
-        {tab==="study"    && <StudyScreen    cards={cards} dueCards={dueCards} filter={studyFilter} setFilter={setStudyFilter} onStart={startStudy} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects} decks={decks} today={today}/>}
+      <div className="screen-scroll">
+        {tab==="home"     && <HomeScreen     cards={cards} dueCards={dueCards} newCards={newCards} streak={streak} todayLogs={todayLogs} onStart={startStudy} today={today} allDueCount={allDueCount}/>}
+        {tab==="study"    && <StudyScreen    cards={cards} dueCards={dueCards} newCards={newCards} filter={studyFilter} setFilter={setStudyFilter} onStart={startStudy} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects} decks={decks} today={today} buildQueue={buildQueue}/>}
         {tab==="notes"    && <NotesScreen    notes={notes} yearLevels={yearLevels} examPeriods={examPeriods} subjects={subjects}/>}
-        {tab==="progress" && <ProgressScreen cards={cards} logs={logs} streak={streak} todayLogs={todayLogs} dueCards={dueCards} today={today}/>}
+        {tab==="progress" && <ProgressScreen cards={cards} logs={logs} streak={streak} todayLogs={todayLogs} dueCards={dueCards} today={today} onSignOut={handleSignOut}/>}
       </div>
 
       {/* Bottom nav */}
-      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:C.navBg, borderTop:`1px solid ${C.border}`, display:"flex", paddingBottom:"env(safe-area-inset-bottom)" }}>
+      <div className="bottom-nav">
         {[["home","home","Home"],["study","cards","Study"],["notes","notes","Notes"],["progress","chart","Progress"]].map(([id,icon,label]) => (
-          <button key={id} onClick={() => { setTab(id); setStudying(false); }} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"10px 0", color:tab===id?C.primary:C.muted, transition:"color 0.15s" }}>
+          <button key={id} onClick={() => { setTab(id); setStudying(false); stopSpeak(); setSpeaking(false); }} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"10px 0", color:tab===id?C.primary:C.muted, transition:"color 0.15s" }}>
             <Ico n={icon} size={22} color={tab===id?C.primary:C.muted}/>
             <span style={{ fontSize:11, fontWeight:tab===id?700:500 }}>{label}</span>
           </button>
@@ -522,16 +650,21 @@ function App() {
 }
 
 // ── HOME SCREEN ───────────────────────────────────────────────────────────────
-function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, today }) {
+function HomeScreen({ cards, dueCards, newCards, streak, todayLogs, onStart, today, allDueCount }) {
   const decksDue = useMemo(() => {
     const map = {};
-    dueCards.forEach(c => {
+    // combine due + new (capped) for home display
+    const combined = [
+      ...dueCards,
+      ...newCards.slice(0, NEW_CARD_CAP),
+    ];
+    combined.forEach(c => {
       const k = `${c.yearLevel}||${c.examPeriod}||${c.subject}||${c.deck}`;
       if (!map[k]) map[k] = { ...c, count:0 };
       map[k].count++;
     });
     return Object.values(map);
-  }, [dueCards]);
+  }, [dueCards, newCards]);
 
   return (
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
@@ -542,6 +675,7 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, today }) {
         <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:12, color:C.muted, fontWeight:600, marginBottom:4 }}>Due today</p>
           <p style={{ fontSize:30, fontWeight:800, color:C.secondary, lineHeight:1 }}>{dueCards.length}</p>
+          {newCards.length > 0 && <p style={{ fontSize:11, color:C.muted, marginTop:4 }}>+{Math.min(newCards.length, NEW_CARD_CAP)} new</p>}
         </div>
         <div style={{ background:C.card, borderRadius:16, padding:"14px 16px", border:`1px solid ${C.border}` }}>
           <p style={{ fontSize:12, color:C.muted, fontWeight:600, marginBottom:4 }}>Streak 🔥</p>
@@ -549,12 +683,12 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, today }) {
         </div>
       </div>
 
-      {dueCards.length > 0 ? (
+      {allDueCount > 0 ? (
         <button
           onClick={() => onStart({}, false)}
           style={{ width:"100%", padding:18, borderRadius:18, background:C.primary, color:"#fff", fontSize:17, fontWeight:800, marginBottom:20, boxShadow:`0 4px 16px ${C.primary}40` }}
         >
-          ✨ Start Studying ({dueCards.length} cards)
+          ✨ Start Studying ({allDueCount} cards)
         </button>
       ) : (
         <div style={{ background:C.card, borderRadius:18, padding:"1.5rem", textAlign:"center", marginBottom:20, border:`1px solid ${C.border}` }}>
@@ -592,22 +726,11 @@ function HomeScreen({ cards, dueCards, streak, todayLogs, onStart, today }) {
 }
 
 // ── STUDY SCREEN ──────────────────────────────────────────────────────────────
-function StudyScreen({ cards, dueCards, filter, setFilter, onStart, yearLevels, examPeriods, subjects, decks, today }) {
+function StudyScreen({ cards, dueCards, newCards, filter, setFilter, onStart, yearLevels, examPeriods, subjects, decks, today, buildQueue }) {
   const f = filter;
 
-  const filteredDue = dueCards.filter(c =>
-    (!f.yearLevel  || c.yearLevel  === f.yearLevel)  &&
-    (!f.examPeriod || c.examPeriod === f.examPeriod) &&
-    (!f.subject    || c.subject    === f.subject)    &&
-    (!f.deck       || c.deck       === f.deck)
-  );
-
-  const filteredAll = cards.filter(c =>
-    (!f.yearLevel  || c.yearLevel  === f.yearLevel)  &&
-    (!f.examPeriod || c.examPeriod === f.examPeriod) &&
-    (!f.subject    || c.subject    === f.subject)    &&
-    (!f.deck       || c.deck       === f.deck)
-  );
+  const sessionCards = buildQueue(f, false);
+  const allCards     = buildQueue(f, true);
 
   return (
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
@@ -620,37 +743,42 @@ function StudyScreen({ cards, dueCards, filter, setFilter, onStart, yearLevels, 
         <FilterSelect label="Deck"        value={f.deck}       options={decks(f.yearLevel, f.examPeriod, f.subject)} onChange={v => setFilter({ ...f, deck:v })}/>
       </div>
 
-      {/* Due cards button */}
+      {/* Due / new breakdown */}
+      <div style={{ background:`${C.secondary}15`, borderRadius:14, padding:"12px 16px", marginBottom:14, display:"flex", justifyContent:"space-between" }}>
+        <div style={{ textAlign:"center" }}>
+          <p style={{ fontSize:22, fontWeight:800, color:C.text }}>{sessionCards.filter(c=>c.repCount!=="0").length}</p>
+          <p style={{ fontSize:11, color:C.muted, fontWeight:600 }}>Due</p>
+        </div>
+        <div style={{ width:1, background:C.border }}/>
+        <div style={{ textAlign:"center" }}>
+          <p style={{ fontSize:22, fontWeight:800, color:C.primary }}>{sessionCards.filter(c=>c.repCount==="0"||!c.nextReviewDate).length}</p>
+          <p style={{ fontSize:11, color:C.muted, fontWeight:600 }}>New (max {NEW_CARD_CAP})</p>
+        </div>
+        <div style={{ width:1, background:C.border }}/>
+        <div style={{ textAlign:"center" }}>
+          <p style={{ fontSize:22, fontWeight:800, color:C.secondary }}>{allCards.length}</p>
+          <p style={{ fontSize:11, color:C.muted, fontWeight:600 }}>Total</p>
+        </div>
+      </div>
+
       <button
         onClick={() => onStart(f, false)}
-        disabled={filteredDue.length === 0}
-        style={{
-          width:"100%", padding:16, borderRadius:16, marginBottom:10,
-          background: filteredDue.length===0 ? "#E0E0DC" : C.primary,
-          color: filteredDue.length===0 ? C.muted : "#fff",
-          fontSize:15, fontWeight:800,
-        }}
+        disabled={sessionCards.length === 0}
+        style={{ width:"100%", padding:16, borderRadius:16, marginBottom:10, background:sessionCards.length===0?"#E0E0DC":C.primary, color:sessionCards.length===0?C.muted:"#fff", fontSize:15, fontWeight:800 }}
       >
-        {filteredDue.length === 0 ? "No cards due today" : `📅 Start Session — ${filteredDue.length} due today`}
+        {sessionCards.length === 0 ? "No cards due today" : `📅 Start Session — ${sessionCards.length} cards`}
       </button>
 
-      {/* Manual revision button — always active if cards exist */}
       <button
         onClick={() => onStart(f, true)}
-        disabled={filteredAll.length === 0}
-        style={{
-          width:"100%", padding:16, borderRadius:16,
-          background: filteredAll.length===0 ? "#E0E0DC" : C.card,
-          color: filteredAll.length===0 ? C.muted : C.secondary,
-          fontSize:15, fontWeight:800,
-          border:`2px solid ${filteredAll.length===0 ? "#E0E0DC" : C.secondary}`,
-        }}
+        disabled={allCards.length === 0}
+        style={{ width:"100%", padding:16, borderRadius:16, background:allCards.length===0?"#E0E0DC":C.card, color:allCards.length===0?C.muted:C.secondary, fontSize:15, fontWeight:800, border:`2px solid ${allCards.length===0?"#E0E0DC":C.secondary}` }}
       >
-        {filteredAll.length === 0 ? "No cards found" : `📝 Revise Deck — ${filteredAll.length} cards`}
+        {allCards.length === 0 ? "No cards found" : `📝 Revise Deck — ${allCards.length} cards`}
       </button>
 
       <p style={{ fontSize:12, color:C.muted, textAlign:"center", marginTop:10, lineHeight:1.5 }}>
-        Revise Deck ignores due dates — use it anytime for extra practice.
+        Revise Deck ignores due dates — use for extra practice anytime.
       </p>
     </div>
   );
@@ -665,7 +793,6 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
     (!f.examPeriod || n.examPeriod === f.examPeriod) &&
     (!f.subject    || n.subject    === f.subject)
   );
-
   const grouped = filtered.reduce((acc, n) => {
     const k = n.subject || "Other";
     if (!acc[k]) acc[k] = [];
@@ -673,10 +800,7 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
   }, {});
 
   const Chip = ({ label, active, onPress }) => (
-    <button
-      onClick={onPress}
-      style={{ padding:"6px 14px", borderRadius:20, whiteSpace:"nowrap", fontSize:13, fontWeight:700, border:`1.5px solid ${active?C.secondary:"#E0E0DC"}`, background:active?C.secondary:C.card, color:active?"#fff":C.muted, transition:"all 0.15s" }}
-    >
+    <button onClick={onPress} style={{ padding:"6px 14px", borderRadius:20, whiteSpace:"nowrap", fontSize:13, fontWeight:700, border:`1.5px solid ${active?C.secondary:"#E0E0DC"}`, background:active?C.secondary:C.card, color:active?"#fff":C.muted, transition:"all 0.15s" }}>
       {label}
     </button>
   );
@@ -684,7 +808,6 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
   return (
     <div className="fade-up" style={{ padding:"28px 20px 0" }}>
       <h1 style={{ fontSize:22, fontWeight:800, marginBottom:16 }}>Notes 📖</h1>
-
       <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:8, marginBottom:6 }}>
         {yearLevels.map(y => <Chip key={y} label={y} active={f.yearLevel===y} onPress={() => setF(f.yearLevel===y?{yearLevel:"",examPeriod:"",subject:""}:{yearLevel:y,examPeriod:"",subject:""})}/>)}
       </div>
@@ -698,7 +821,6 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
           {subjects(f.yearLevel,f.examPeriod).map(s => <Chip key={s} label={s} active={f.subject===s} onPress={() => setF(f.subject===s?{...f,subject:""}:{...f,subject:s})}/>)}
         </div>
       )}
-
       {Object.keys(grouped).length === 0 ? (
         <div style={{ textAlign:"center", color:C.muted, padding:"3rem 0" }}>
           <p style={{ fontSize:40, marginBottom:8 }}>🗒️</p>
@@ -728,7 +850,7 @@ function NotesScreen({ notes, yearLevels, examPeriods, subjects }) {
 }
 
 // ── PROGRESS SCREEN ───────────────────────────────────────────────────────────
-function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
+function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today, onSignOut }) {
   const last7 = useMemo(() => {
     const days = [];
     for (let i=6; i>=0; i--) {
@@ -738,7 +860,6 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
     }
     return days;
   }, [logs]);
-
   const maxCount = Math.max(...last7.map(d=>d.count), 1);
 
   const deckStats = useMemo(() => {
@@ -747,7 +868,7 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
       const k = `${c.subject} · ${c.deck}`;
       if (!map[k]) map[k] = { k, total:0, due:0 };
       map[k].total++;
-      if (!c.nextReviewDate || c.nextReviewDate <= today) map[k].due++;
+      if (c.nextReviewDate && c.nextReviewDate <= today) map[k].due++;
     });
     return Object.values(map).sort((a,b)=>b.due-a.due);
   }, [cards, today]);
@@ -779,7 +900,7 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
       </div>
 
       {deckStats.length > 0 && (
-        <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid ${C.border}` }}>
+        <div style={{ background:C.card, borderRadius:18, padding:"1.25rem", border:`1px solid ${C.border}`, marginBottom:16 }}>
           <p style={{ fontSize:14, fontWeight:700, marginBottom:16 }}>Deck breakdown</p>
           {deckStats.map(({k,total,due}) => (
             <div key={k} style={{ marginBottom:14 }}>
@@ -794,6 +915,14 @@ function ProgressScreen({ cards, logs, streak, todayLogs, dueCards, today }) {
           ))}
         </div>
       )}
+
+      {/* Sign out */}
+      <button
+        onClick={onSignOut}
+        style={{ width:"100%", padding:"12px", borderRadius:14, border:`1.5px solid ${C.border}`, color:C.muted, fontSize:14, fontWeight:700, marginBottom:20 }}
+      >
+        Sign out
+      </button>
     </div>
   );
 }
