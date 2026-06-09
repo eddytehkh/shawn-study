@@ -17,7 +17,7 @@
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body, #root { height: 100%; }
+  html { height: 100%; }
   body {
     font-family: 'Nunito', sans-serif;
     background: #FAFAF7;
@@ -25,10 +25,9 @@
     overflow: hidden;
     position: fixed;
     width: 100%;
-    /* Issue 1: iPhone Safari safe area */
-    padding-bottom: env(safe-area-inset-bottom);
+    height: 100dvh;
   }
-  #root { overflow: hidden; height: 100%; }
+  #root { overflow: hidden; width: 100%; height: 100dvh; }
   button { font-family: 'Nunito', sans-serif; cursor: pointer; border: none; background: none; }
   select, input { font-family: 'Nunito', sans-serif; }
   a { text-decoration: none; }
@@ -47,12 +46,11 @@
   .fade-up   { animation: fadeUp 0.25s ease both; }
   .flip-anim { animation: flipCard 0.35s ease both; }
 
-  /* Issue 1: push content above Safari bottom bar */
   .screen-scroll {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
   }
   .bottom-nav {
     position: fixed;
@@ -68,10 +66,8 @@
     z-index: 100;
   }
   .study-buttons {
-    padding-top: 16px;
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-    padding-left: 0;
-    padding-right: 0;
+    padding-top: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
 </style>
 </head>
@@ -496,7 +492,7 @@ function App() {
 
   // ── Sign in screen ─────────────────────────────────────────────────────────
   if (!authed) return (
-    <div style={{ height:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"2rem", background:C.bg }}>
+    <div style={{ height:"100dvh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"2rem", background:C.bg }}>
       <div style={{ textAlign:"center", marginBottom:"2rem" }}>
         <div style={{ fontSize:64, marginBottom:12 }}>📚</div>
         <h1 style={{ fontSize:28, fontWeight:800 }}>StudyFlow</h1>
@@ -529,7 +525,7 @@ function App() {
     const currentText = flipped ? card.back : card.front;
 
     return (
-      <div style={{ height:"100vh", display:"flex", flexDirection:"column", background:C.bg }}>
+      <div style={{ height:"100dvh", display:"flex", flexDirection:"column", background:C.bg }}>
         {/* Header */}
         <div style={{ padding:"16px 20px 10px", display:"flex", alignItems:"center", gap:12 }}>
           <button
@@ -616,7 +612,7 @@ function App() {
   const allDueCount = [...dueCards, ...newCards.slice(0, NEW_CARD_CAP)].length;
 
   return (
-    <div style={{ height:"100vh", display:"flex", flexDirection:"column", maxWidth:480, margin:"0 auto" }}>
+    <div style={{ height:"100dvh", display:"flex", flexDirection:"column", maxWidth:480, margin:"0 auto" }}>
       {loading && (
         <div style={{ padding:"12px 20px", display:"flex", alignItems:"center", gap:8, background:"#F0F4F0", borderBottom:`1px solid #E0E8E0` }}>
           <Ico n="refresh" size={16} color={C.primary}/>
